@@ -1,10 +1,19 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ImageWithBasePath from '../../core/img/imagewithbasebath'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { ChevronUp, Filter, PlusCircle, RotateCcw, Sliders, StopCircle, Zap } from 'feather-icons-react/build/IconComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import { setToogleHeader } from '../../core/redux/action';
+import {
+    closeBootstrapModal,
+    createSubCategory,
+    deleteSubCategory,
+    fetchCategories,
+    fetchSubCategories,
+    updateSubCategory,
+} from '../../core/redux/inventoryAction';
+import { showErrorToast, showSuccessToast } from '../../core/utils/toast';
 import Select from 'react-select';
 import AddSubcategory from '../../core/modals/inventory/addsubcategory';
 import EditSubcategories from './editsubcategories';
@@ -16,6 +25,33 @@ const SubCategories = () => {
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
     const dataSource = useSelector((state) => state.subcategory_data);
+    const inventoryLoading = useSelector((state) => state.inventory_loading);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(null);
+
+    useEffect(() => {
+        dispatch(fetchCategories());
+        dispatch(fetchSubCategories());
+    }, [dispatch]);
+
+    const handleCreateSubCategory = async (payload) => {
+        try {
+            await dispatch(createSubCategory(payload));
+            closeBootstrapModal('add-category');
+            showSuccessToast('Subcategory Created', 'Subcategory added successfully.');
+        } catch (error) {
+            showErrorToast('Create Failed', error.message);
+        }
+    };
+
+    const handleUpdateSubCategory = async (id, payload) => {
+        try {
+            await dispatch(updateSubCategory(id, payload));
+            closeBootstrapModal('edit-category');
+            showSuccessToast('Subcategory Updated', 'Subcategory saved successfully.');
+        } catch (error) {
+            showErrorToast('Update Failed', error.message);
+        }
+    };
 
     const oldandlatestvalue = [
         { value: 'date', label: 'Sort by Date' },
@@ -117,14 +153,27 @@ const SubCategories = () => {
             title: 'Actions',
             dataIndex: 'actions',
             key: 'actions',
-            render: () => (
+            render: (_, record) => (
                 <td className="action-table-data">
                     <div className="edit-delete-action">
-                        <Link className="me-2 p-2" to="#" data-bs-toggle="modal" data-bs-target="#edit-category">
+                        <Link
+                            className="me-2 p-2"
+                            to="#"
+                            data-bs-toggle="modal"
+                            data-bs-target="#edit-category"
+                            onClick={() => setSelectedSubCategory(record)}
+                        >
                             <i data-feather="edit" className="feather-edit"></i>
                         </Link>
                         <Link className="confirm-text p-2" to="#"  >
-                            <i data-feather="trash-2" className="feather-trash-2" onClick={showConfirmationAlert}></i>
+                            <i
+                                data-feather="trash-2"
+                                className="feather-trash-2"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    showConfirmationAlert(record);
+                                }}
+                            ></i>
                         </Link>
                     </div>
                 </td>
@@ -133,7 +182,7 @@ const SubCategories = () => {
     ]
     const MySwal = withReactContent(Swal);
 
-    const showConfirmationAlert = () => {
+    const showConfirmationAlert = (record) => {
         MySwal.fire({
             title: 'Are you sure?',
             text: 'You won\'t be able to revert this!',
@@ -142,18 +191,14 @@ const SubCategories = () => {
             confirmButtonText: 'Yes, delete it!',
             cancelButtonColor: '#ff0000',
             cancelButtonText: 'Cancel',
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-
-                MySwal.fire({
-                    title: 'Deleted!',
-                    text: 'Your file has been deleted.',
-                    className: "btn btn-success",
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-success',
-                    },
-                });
+                try {
+                    await dispatch(deleteSubCategory(record.id));
+                    showSuccessToast('Deleted', 'Subcategory removed successfully.');
+                } catch (error) {
+                    showErrorToast('Delete Failed', error.message);
+                }
             } else {
                 MySwal.close();
             }
@@ -318,7 +363,7 @@ const SubCategories = () => {
                             </div>
                             {/* /Filter */}
                             <div className="table-responsive">
-                            <Table columns={columns} dataSource={dataSource} />
+                            <Table columns={columns} dataSource={dataSource} loading={inventoryLoading} />
 
                             </div>
                         </div>
@@ -327,8 +372,12 @@ const SubCategories = () => {
                 </div>
             </div>
 
-            <AddSubcategory/>
-            <EditSubcategories/>
+            <AddSubcategory onSubmit={handleCreateSubCategory} loading={inventoryLoading} />
+            <EditSubcategories
+                selectedSubCategory={selectedSubCategory}
+                onSubmit={handleUpdateSubCategory}
+                loading={inventoryLoading}
+            />
         </div>
     )
 }

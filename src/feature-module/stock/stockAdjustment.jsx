@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Breadcrumbs from "../../core/breadcrumbs";
 import { Filter, Sliders } from "react-feather";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
@@ -11,10 +11,17 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Table from "../../core/pagination/datatable";
 import StockadjustmentModal from "../../core/modals/stocks/stockadjustmentModal";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchStockReport } from "../../core/redux/inventoryAction";
 
 const StockAdjustment = () => {
+  const dispatch = useDispatch();
   const data = useSelector((state) => state.managestockdata);
+  const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+  useEffect(() => {
+    dispatch(fetchStockReport());
+  }, [dispatch]);
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -299,6 +306,7 @@ const StockAdjustment = () => {
                 className="table datanew"
                 columns={columns}
                 dataSource={data}
+                loading={inventoryLoading}
               />
             </div>
           </div>

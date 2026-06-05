@@ -1,208 +1,282 @@
-import { DatePicker } from 'antd';
-import { PlusCircle } from 'feather-icons-react/build/IconComponents';
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import Select from 'react-select'
-import TextEditor from '../../../feature-module/inventory/texteditor';
+import { DatePicker } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import Select from "react-select";
+import { useSelector } from "react-redux";
+import { showErrorToast } from "../../utils/toast";
 
-const EditPurchases = () => {
+const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
 
-    const status = [
-        { value: 'choose', label: 'Choose' },
-        { value: 'received', label: 'Received' },
-        { value: 'pending', label: 'Pending' },
-    ];
-    const productlist = [
-        { value: 'choose', label: 'Choose' },
-        { value: 'Shoe', label: 'Shoe' },
-        { value: 'Mobile', label: 'Mobile' },
-    ];
-    const customers = [
-        { value: 'Select Customer', label: 'Select Customer' },
-        { value: 'Apex Computers', label: 'Apex Computers' },
-        { value: 'Dazzle Shoes', label: 'Dazzle Shoes' },
-        { value: 'Best Accessories', label: 'Best Accessories' },
-    ];
+const EditPurchases = ({ order, onSubmit, loading = false }) => {
+  const suppliers = useSelector((state) => state.supplierdata);
 
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const handleDateChange = (date) => {
-        setSelectedDate(date);
-    };
+  const [supplierId, setSupplierId] = useState(null);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [status, setStatus] = useState("pending");
+  const [amountPaid, setAmountPaid] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [items, setItems] = useState([]);
 
-    return (
-        <div>
-            {/* Add Purchase */}
-            <div className="modal fade" id="edit-units">
-                <div className="modal-dialog purchase modal-dialog-centered stock-adjust-modal">
-                    <div className="modal-content">
-                        <div className="page-wrapper-new p-0">
-                            <div className="content">
-                                <div className="modal-header border-0 custom-modal-header">
-                                    <div className="page-title">
-                                        <h4>Add Purchase</h4>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="close"
-                                        data-bs-dismiss="modal"
-                                        aria-label="Close"
-                                    >
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                </div>
-                                <div className="modal-body custom-modal-body">
-                                    <form>
-                                        <div className="row">
-                                            <div className="col-lg-3 col-md-6 col-sm-12">
-                                                <div className="input-blocks add-product">
-                                                    <label>Supplier Name</label>
-                                                    <div className="row">
-                                                        <div className="col-lg-10 col-sm-10 col-10">
+  const supplierOptions = useMemo(
+    () =>
+      suppliers.map((item) => ({
+        value: item.id,
+        label: item.supplierName,
+      })),
+    [suppliers]
+  );
 
-                                                            <Select options={customers} className="select" placeholder="Choose" />
+  const statusOptions = [
+    { value: "pending", label: "Pending" },
+    { value: "received", label: "Received" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
 
-                                                        </div>
-                                                        <div className="col-lg-2 col-sm-2 col-2 ps-0">
-                                                            <div className="add-icon tab">
-                                                                <Link to="#">
-                                                                    <PlusCircle className="feather-plus-circles"/>
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-lg-3 col-md-6 col-sm-12">
-                                                <div className="input-blocks">
-                                                    <label>Purchase Date</label>
-                                                    <div className="input-groupicon calender-input">
-                                                       
-                                                        <DatePicker
-                                                        selected={selectedDate}
-                                                        onChange={handleDateChange}
-                                                        type="date"
-                                                        className="filterdatepicker"
-                                                        dateFormat="dd-MM-yyyy"
-                                                        placeholder='Choose Date'
-                                                    />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-lg-3 col-md-6 col-sm-12">
-                                                <div className="input-blocks">
-                                                    <label>Product Name</label>
-                                                    <Select options={productlist} className="select" placeholder="Choose" />
+  useEffect(() => {
+    if (!order) return;
 
-                                                </div>
-                                            </div>
-                                            <div className="col-lg-3 col-md-6 col-sm-12">
-                                                <div className="input-blocks">
-                                                    <label>Reference No</label>
-                                                    <input type="text" className="form-control" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="row">
-                                            <div className="col-lg-12">
-                                                <div className="input-blocks">
-                                                    <label>Product Name</label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Please type product code and select"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="col-lg-12">
-                                                <div className="modal-body-table">
-                                                    <div className="table-responsive">
-                                                        <table className="table  datanew">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Product</th>
-                                                                    <th>Qty</th>
-                                                                    <th>Purchase Price($)</th>
-                                                                    <th>Discount($)</th>
-                                                                    <th>Tax(%)</th>
-                                                                    <th>Tax Amount($)</th>
-                                                                    <th>Unit Cost($)</th>
-                                                                    <th>Total Cost(%)</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <tr>
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                    <td className="p-5" />
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="row">
-                                                <div className="col-lg-3 col-md-6 col-sm-12">
-                                                    <div className="input-blocks">
-                                                        <label>Order Tax</label>
-                                                        <input type="text" defaultValue={0} />
-                                                    </div>
-                                                </div>
-                                                <div className="col-lg-3 col-md-6 col-sm-12">
-                                                    <div className="input-blocks">
-                                                        <label>Discount</label>
-                                                        <input type="text" defaultValue={0} />
-                                                    </div>
-                                                </div>
-                                                <div className="col-lg-3 col-md-6 col-sm-12">
-                                                    <div className="input-blocks">
-                                                        <label>Shipping</label>
-                                                        <input type="text" defaultValue={0} />
-                                                    </div>
-                                                </div>
-                                                <div className="col-lg-3 col-md-6 col-sm-12">
-                                                    <div className="input-blocks">
-                                                        <label>Status</label>
-                                                        <Select options={status} className="select" placeholder="Choose" />
+    const supplierValue = order.supplier_id?._id || order.supplier_id || null;
+    setSupplierId(supplierValue);
+    setOrderNumber(order.order_number || "");
+    setStatus(order.status || "pending");
+    setAmountPaid(String(order.amount_paid ?? 0));
+    setSelectedDate(order.order_date ? new Date(order.order_date) : new Date());
+    setItems(
+      (order.items || []).map((item) => ({
+        product_id: item.product_id?._id || item.product_id,
+        product_name:
+          item.product_id?.name || item.product_name || "Product",
+        quantity: String(item.quantity ?? ""),
+        price: String(item.price ?? ""),
+      }))
+    );
+  }, [order]);
 
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="col-lg-12">
-                                            <div className="input-blocks summer-description-box">
-                                                <label>Notes</label>
-                                                <div id="summernote" /> 
-                                                <TextEditor />
-                                            </div>
-                                        </div>
-                                        <div className="col-lg-12">
-                                            <div className="modal-footer-btn">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-cancel me-2"
-                                                    data-bs-dismiss="modal"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <Link to="#" className="btn btn-submit">
-                                                    Submit
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  const handleItemChange = (index, field, value) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!order?._id || !supplierId) {
+      showErrorToast("Validation Error", "Supplier is required.");
+      return;
+    }
+
+    const parsedItems = items
+      .map((item) => ({
+        product_id: item.product_id,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+      }))
+      .filter((item) => item.product_id && item.quantity > 0);
+
+    if (!parsedItems.length) {
+      showErrorToast("Validation Error", "At least one valid item is required.");
+      return;
+    }
+
+    await onSubmit?.({
+      supplier_id: supplierId,
+      order_number: orderNumber.trim() || undefined,
+      order_date: selectedDate,
+      items: parsedItems,
+      amount_paid: Number(amountPaid || 0),
+      status,
+    });
+  };
+
+  return (
+    <div className="modal fade" id="edit-units">
+      <div className="modal-dialog purchase modal-dialog-centered stock-adjust-modal modal-lg">
+        <div className="modal-content">
+          <div className="page-wrapper-new p-0">
+            <div className="content">
+              <div className="modal-header border-0 custom-modal-header">
+                <div className="page-title">
+                  <h4>Edit Purchase</h4>
+                  {order?.order_number && (
+                    <p className="mb-0 text-muted">Reference: {order.order_number}</p>
+                  )}
                 </div>
-            </div>
-            {/* /Add Purchase */}
-        </div>
-    )
-}
+                <button
+                  type="button"
+                  className="close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </div>
+              <div className="modal-body custom-modal-body">
+                <form onSubmit={handleSubmit}>
+                  <div className="row">
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <div className="input-blocks add-product">
+                        <label>Supplier Name</label>
+                        <Select
+                          options={supplierOptions}
+                          className="select"
+                          placeholder="Choose"
+                          value={
+                            supplierOptions.find(
+                              (item) => item.value === supplierId
+                            ) || null
+                          }
+                          onChange={(option) =>
+                            setSupplierId(option?.value || null)
+                          }
+                          isDisabled={!order}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <div className="input-blocks">
+                        <label>Purchase Date</label>
+                        <DatePicker
+                          selected={selectedDate}
+                          onChange={setSelectedDate}
+                          className="filterdatepicker form-control"
+                          dateFormat="dd-MM-yyyy"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <div className="input-blocks">
+                        <label>Reference No</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={orderNumber}
+                          onChange={(e) => setOrderNumber(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <div className="input-blocks">
+                        <label>Status</label>
+                        <Select
+                          options={statusOptions}
+                          className="select"
+                          value={
+                            statusOptions.find((item) => item.value === status) ||
+                            null
+                          }
+                          onChange={(option) =>
+                            setStatus(option?.value || "pending")
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="col-lg-3 col-md-6 col-sm-12">
+                      <div className="input-blocks">
+                        <label>Amount Paid</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="form-control"
+                          value={amountPaid}
+                          onChange={(e) => setAmountPaid(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-export default EditPurchases
+                  <h6 className="mt-3 mb-2">Order Items</h6>
+                  <div className="table-responsive">
+                    <table className="table datanew">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Qty</th>
+                          <th>Price</th>
+                          <th>Line Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.length ? (
+                          items.map((item, index) => (
+                            <tr key={`${item.product_id}-${index}`}>
+                              <td>{item.product_name}</td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  className="form-control form-control-sm"
+                                  value={item.quantity}
+                                  onChange={(e) =>
+                                    handleItemChange(index, "quantity", e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  className="form-control form-control-sm"
+                                  value={item.price}
+                                  onChange={(e) =>
+                                    handleItemChange(index, "price", e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                {formatMoney(
+                                  Number(item.quantity || 0) * Number(item.price || 0)
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="text-center">
+                              No items
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {order && (
+                    <div className="text-end mb-3">
+                      <p className="mb-0">
+                        Grand Total:{" "}
+                        {formatMoney(order.net_total ?? order.order_total)}
+                      </p>
+                      <p className="mb-0">
+                        Due: {formatMoney(order.amount_remaining)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="modal-footer-btn">
+                    <button
+                      type="button"
+                      className="btn btn-cancel me-2"
+                      data-bs-dismiss="modal"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-submit"
+                      disabled={loading || !order}
+                    >
+                      {loading ? "Saving..." : "Update Purchase"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EditPurchases;

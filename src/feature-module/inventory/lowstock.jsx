@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ImageWithBasePath from '../../core/img/imagewithbasebath';
 import { Archive, Box, ChevronUp, Mail, RotateCcw, Sliders, Zap } from 'feather-icons-react/build/IconComponents';
 import { useDispatch, useSelector } from 'react-redux';
 import { setToogleHeader } from '../../core/redux/action';
+import { fetchStockReport } from '../../core/redux/inventoryAction';
 import Select from 'react-select';
 import { Filter } from 'react-feather';
 import EditLowStock from '../../core/modals/inventory/editlowstock';
@@ -17,6 +18,11 @@ const LowStock = () => {
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
     const dataSource = useSelector((state) => state.lowstock_data);
+    const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+    useEffect(() => {
+        dispatch(fetchStockReport());
+    }, [dispatch]);
     const [isFilterVisible, setIsFilterVisible] = useState(false);
     const toggleFilterVisibility = () => {
         setIsFilterVisible((prevVisibility) => !prevVisibility);
@@ -364,7 +370,7 @@ const LowStock = () => {
                                         </div>
                                         {/* /Filter */}
                                         <div className="table-responsive">
-                                        <Table columns={columns} dataSource={dataSource} />
+                                        <Table columns={columns} dataSource={dataSource} loading={inventoryLoading} />
                                         </div>
                                     </div>
                                 </div>
@@ -466,7 +472,7 @@ const LowStock = () => {
                                         </div>
                                         {/* /Filter */}
                                         <div className="table-responsive">
-                                            <Table columns={columns} dataSource={dataSource} />
+                                            <Table columns={columns} dataSource={dataSource} loading={inventoryLoading} />
 
                                         </div>
                                     </div>

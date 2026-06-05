@@ -1,29 +1,57 @@
-import React from "react";
-import Select from "react-select";
-import ImageWithBasePath from "../../img/imagewithbasebath";
+import React, { useEffect, useState } from "react";
 
-const SupplierModal = () => {
-  const options1 = [
-    { value: "Choose", label: "Choose" },
-    { value: "Varrel", label: "Varrel" },
-  ];
+const SupplierModal = ({ selectedSupplier, onCreate, onUpdate, loading = false }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [openingBalance, setOpeningBalance] = useState("");
+  const [openingBalanceNote, setOpeningBalanceNote] = useState("");
 
-  const options2 = [
-    { value: "Choose", label: "Choose" },
-    { value: "Germany", label: "Germany" },
-    { value: "Mexico", label: "Mexico" },
-  ];
+  useEffect(() => {
+    if (selectedSupplier) {
+      setName(selectedSupplier.supplierName || "");
+      setEmail(selectedSupplier.email || "");
+      setPhone(selectedSupplier.phone || "");
+      setAddress(selectedSupplier._raw?.address || selectedSupplier.country || "");
+      setOpeningBalance(String(selectedSupplier._raw?.opening_balance ?? ""));
+      setOpeningBalanceNote(selectedSupplier._raw?.opening_balance_note || "");
+    }
+  }, [selectedSupplier]);
 
-  const options3 = [{ value: "Varrel", label: "Varrel" }];
+  const resetAddForm = () => {
+    setName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
+    setOpeningBalance("");
+    setOpeningBalanceNote("");
+  };
 
-  const options4 = [
-    { value: "Germany", label: "Germany" },
-    { value: "France", label: "France" },
-    { value: "Mexico", label: "Mexico" },
-  ];
+  const buildPayload = () => ({
+    name: name.trim(),
+    email: email.trim(),
+    phone: phone.trim(),
+    address: address.trim(),
+    opening_balance: Number(openingBalance || 0),
+    opening_balance_note: openingBalanceNote.trim(),
+  });
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) return;
+    await onCreate(buildPayload());
+    resetAddForm();
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!selectedSupplier?.id || !name.trim() || !phone.trim()) return;
+    await onUpdate(selectedSupplier.id, buildPayload());
+  };
+
   return (
     <div>
-      {/* Add Supplier */}
       <div className="modal fade" id="add-units">
         <div className="modal-dialog modal-dialog-centered custom-modal-two">
           <div className="modal-content">
@@ -43,76 +71,50 @@ const SupplierModal = () => {
                   </button>
                 </div>
                 <div className="modal-body custom-modal-body">
-                  <form>
+                  <form onSubmit={handleCreate}>
                     <div className="row">
-                      <div className="col-lg-12">
-                        <div className="new-employee-field">
-                          <span>Avatar</span>
-                          <div className="profile-pic-upload mb-2">
-                            <div className="profile-pic">
-                              <span>
-                                <i
-                                  data-feather="plus-circle"
-                                  className="plus-down-add"
-                                />{" "}
-                                Profile Photo
-                              </span>
-                            </div>
-                            <div className="input-blocks mb-0">
-                              <div className="image-upload mb-0">
-                                <input type="file" />
-                                <div className="image-uploads">
-                                  <h4>Change Image</h4>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
                       <div className="col-lg-4">
                         <div className="input-blocks">
                           <label>Supplier Name</label>
-                          <input type="text" className="form-control" />
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="col-lg-4">
                         <div className="input-blocks">
                           <label>Email</label>
-                          <input type="email" className="form-control" />
+                          <input
+                            type="email"
+                            className="form-control"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="col-lg-4">
                         <div className="input-blocks">
                           <label>Phone</label>
-                          <input type="text" className="form-control" />
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="col-lg-12">
                         <div className="input-blocks">
                           <label>Address</label>
-                          <input type="text" className="form-control" />
-                        </div>
-                      </div>
-                      <div className="col-lg-6 col-sm-10 col-10">
-                        <div className="input-blocks">
-                          <label>City</label>
-                          <Select className="select" options={options1} />
-                        </div>
-                      </div>
-                      <div className="col-lg-6 col-sm-10 col-10">
-                        <div className="input-blocks">
-                          <label>Country</label>
-                          <Select className="select" options={options2} />
-                        </div>
-                      </div>
-                      <div className="col-md-12">
-                        <div className="mb-0 input-blocks">
-                          <label className="form-label">Descriptions</label>
-                          <textarea
-                            className="form-control mb-1"
-                            defaultValue={""}
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
                           />
-                          <p>Maximum 600 Characters</p>
                         </div>
                       </div>
                     </div>
@@ -124,8 +126,8 @@ const SupplierModal = () => {
                       >
                         Cancel
                       </button>
-                      <button type="submit" className="btn btn-submit">
-                        Submit
+                      <button type="submit" className="btn btn-submit" disabled={loading}>
+                        {loading ? "Saving..." : "Submit"}
                       </button>
                     </div>
                   </form>
@@ -135,8 +137,7 @@ const SupplierModal = () => {
           </div>
         </div>
       </div>
-      {/* /Add Supplier */}
-      {/* Edit Supplier */}
+
       <div className="modal fade" id="edit-units">
         <div className="modal-dialog modal-dialog-centered custom-modal-two">
           <div className="modal-content">
@@ -156,38 +157,17 @@ const SupplierModal = () => {
                   </button>
                 </div>
                 <div className="modal-body custom-modal-body">
-                  <form>
+                  <form onSubmit={handleUpdate}>
                     <div className="row">
-                      <div className="col-lg-12">
-                        <div className="new-employee-field">
-                          <span>Avatar</span>
-                          <div className="profile-pic-upload edit-pic">
-                            <div className="profile-pic">
-                              <span>
-                                <ImageWithBasePath
-                                  src="assets/img/supplier/edit-supplier.jpg"
-                                  alt
-                                />
-                              </span>
-                              <div className="close-img">
-                                <i data-feather="x" className="info-img" />
-                              </div>
-                            </div>
-                            <div className="input-blocks mb-0">
-                              <div className="image-upload mb-0">
-                                <input type="file" />
-                                <div className="image-uploads">
-                                  <h4>Change Image</h4>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
                       <div className="col-lg-4">
                         <div className="input-blocks">
                           <label>Supplier Name</label>
-                          <input type="text" placeholder="Apex Computers" />
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="col-lg-4">
@@ -195,14 +175,21 @@ const SupplierModal = () => {
                           <label>Email</label>
                           <input
                             type="email"
-                            placeholder="apexcomputers@example.com"
+                            className="form-control"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                           />
                         </div>
                       </div>
                       <div className="col-lg-4">
                         <div className="input-blocks">
                           <label>Phone</label>
-                          <input type="text" placeholder={+12163547758} />
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="col-lg-12">
@@ -210,29 +197,11 @@ const SupplierModal = () => {
                           <label>Address</label>
                           <input
                             type="text"
-                            placeholder="Budapester Strasse 2027259 "
+                            className="form-control"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
                           />
                         </div>
-                      </div>
-                      <div className="col-lg-6 col-sm-10 col-10">
-                        <div className="input-blocks">
-                          <label>City</label>
-                          <Select className="select" options={options3} />
-                        </div>
-                      </div>
-                      <div className="col-lg-6 col-sm-10 col-10">
-                        <div className="input-blocks">
-                          <label>Country</label>
-                          <Select className="select" options={options4} />
-                        </div>
-                      </div>
-                      <div className="mb-0 input-blocks">
-                        <label className="form-label">Descriptions</label>
-                        <textarea
-                          className="form-control mb-1"
-                          defaultValue={""}
-                        />
-                        <p>Maximum 600 Characters</p>
                       </div>
                     </div>
                     <div className="modal-footer-btn">
@@ -243,8 +212,8 @@ const SupplierModal = () => {
                       >
                         Cancel
                       </button>
-                      <button type="submit" className="btn btn-submit">
-                        Submit
+                      <button type="submit" className="btn btn-submit" disabled={loading}>
+                        {loading ? "Saving..." : "Save Changes"}
                       </button>
                     </div>
                   </form>
@@ -254,7 +223,6 @@ const SupplierModal = () => {
           </div>
         </div>
       </div>
-      {/* /Edit Supplier */}
     </div>
   );
 };

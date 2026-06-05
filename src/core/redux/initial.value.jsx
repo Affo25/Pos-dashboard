@@ -11,7 +11,6 @@ import { designationdata } from "../json/designationdata";
 import { shiftlistdata } from "../json/shiftlistdata";
 import { attendenceemployeedata } from "../json/attendence-employeedata";
 import { invoicereportdata } from "../json/invoicereportdata";
-import { salersretrunsdata } from "../json/salesreturn";
 import { quotationlistdata } from "../json/quotationlistdata";
 import { CustomerData } from "../json/customer_data";
 import { SupplierData } from "../json/supplier_data";
@@ -41,7 +40,9 @@ const initialState = {
   auth_loading: false,
   auth_error: null,
   isAuthenticated: Boolean(storedToken),
-  product_list: productlistdata,
+  product_list: [],
+  inventory_loading: false,
+  stock_report_summary: null,
   dashboard_recentproduct: dashboarrecentproductddata,
   dashboard_expiredproduct: expiredproductdata,
   saleshdashboard_recenttransaction: salestransaction,
@@ -55,24 +56,29 @@ const initialState = {
   shiftlist_data: shiftlistdata,
   attendenceemployee_data: attendenceemployeedata,
   toggle_header: false,
-  invoicereport_data: invoicereportdata,
-  salesreturns_data: salersretrunsdata,
+  invoicereport_data: [],
+  salesreturns_data: [],
+  purchase_returns_data: [],
   quotationlist_data: quotationlistdata,
   customerdata: CustomerData,
-  supplierdata: SupplierData,
-  managestockdata: ManageStocksdata,
-  stocktransferdata: StockTransferData,
-  userlist_data: userlisadata,
+  supplierdata: [],
+  sales_list_data: [],
+  purchase_orders_data: [],
+  app_settings: null,
+  business_loading: false,
+  managestockdata: [],
+  stocktransferdata: [],
+  userlist_data: [],
   rolesandpermission_data: rolesandpermission,
   deleteaccount_data: deleteaccountdata,
   attendanceadmin_data: attandanceadmindata,
   leavesadmin_data: leavesadmindata,
   leavetypes_data: leavetypedata,
   holiday_data: leavedata,
-  expiredproduct_data: expiredproduct,
-  lowstock_data: lowstockdata,
-  categotylist_data: categorylist,
-  subcategory_data: subcateorydata,
+  expiredproduct_data: [],
+  lowstock_data: [],
+  categotylist_data: [],
+  subcategory_data: [],
   callhistory_data: callhistorydata,
   layoutstyledata: localStorage.getItem("layoutStyling"),
 };

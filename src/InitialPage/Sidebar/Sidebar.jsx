@@ -1,14 +1,36 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Scrollbars from "react-custom-scrollbars-2";
-// import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import { SidebarData } from "../../core/json/siderbar_data";
 import HorizontalSidebar from "./horizontalSidebar";
 import CollapsedSidebar from "./collapsedSidebar";
 
+const filterMenuByRole = (menu, userType) => {
+  const canSee = (item) => !item?.superAdminOnly || userType === "superAdmin";
+
+  return menu
+    .filter((section) => canSee(section))
+    .map((section) => ({
+      ...section,
+      submenuItems: (section.submenuItems || [])
+        .filter((item) => canSee(item))
+        .map((item) => ({
+          ...item,
+          submenuItems: (item.submenuItems || []).filter((subItem) => canSee(subItem)),
+        }))
+        .filter((item) => !item.submenu || item.submenuItems?.length),
+    }))
+    .filter((section) => section.submenuItems?.length);
+};
+
 const Sidebar = () => {
-  // const SidebarData = useSelector((state) => state.sidebar_data);
-  // console.log(sidebarData, "sidebar");
+  const authUser = useSelector((state) => state.auth_user);
+  const userType = authUser?.user_type || "user";
+  const visibleSidebarData = useMemo(
+    () => filterMenuByRole(SidebarData, userType),
+    [userType]
+  );
 
   const Location = useLocation();
 
@@ -40,7 +62,7 @@ const Sidebar = () => {
           <div className="sidebar-inner slimscroll">
             <div id="sidebar-menu" className="sidebar-menu">
               <ul>
-                {SidebarData?.map((mainLabel, index) => (
+                {visibleSidebarData?.map((mainLabel, index) => (
                   <li className="submenu-open" key={index}>
                     <h6 className="submenu-hdr">{mainLabel?.label}</h6>
 

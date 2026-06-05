@@ -1,6 +1,14 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+    closeBootstrapModal,
+    createUser,
+    deleteUser,
+    fetchUsers,
+    updateUser,
+} from '../../core/redux/businessAction';
+import { showErrorToast, showSuccessToast } from '../../core/utils/toast';
 import ImageWithBasePath from '../../core/img/imagewithbasebath';
 import { ChevronUp, RotateCcw } from 'feather-icons-react/build/IconComponents';
 import { setToogleHeader } from '../../core/redux/action';
@@ -15,6 +23,8 @@ import EditUser from '../../core/modals/usermanagement/edituser';
 
 
 const Users = () => {
+    const navigate = useNavigate();
+    const authUser = useSelector((state) => state.auth_user);
 
     const oldandlatestvalue = [
         { value: 'date', label: 'Sort by Date' },
@@ -41,7 +51,41 @@ const Users = () => {
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
     const dataSource = useSelector((state) => state.userlist_data);
+    const businessLoading = useSelector((state) => state.business_loading);
+    const [selectedUser, setSelectedUser] = useState(null);
     const [isFilterVisible, setIsFilterVisible] = useState(false);
+
+    useEffect(() => {
+        if (authUser?.user_type !== 'superAdmin') {
+            navigate('/');
+            return;
+        }
+        dispatch(fetchUsers());
+    }, [dispatch, authUser, navigate]);
+
+    if (authUser?.user_type !== 'superAdmin') {
+        return null;
+    }
+
+    const handleCreateUser = async (payload) => {
+        try {
+            await dispatch(createUser(payload));
+            closeBootstrapModal('add-units');
+            showSuccessToast('User Created', 'User added successfully.');
+        } catch (error) {
+            showErrorToast('Create Failed', error.message);
+        }
+    };
+
+    const handleUpdateUser = async (id, payload) => {
+        try {
+            await dispatch(updateUser(id, payload));
+            closeBootstrapModal('edit-units');
+            showSuccessToast('User Updated', 'User saved successfully.');
+        } catch (error) {
+            showErrorToast('Update Failed', error.message);
+        }
+    };
     const toggleFilterVisibility = () => {
         setIsFilterVisible((prevVisibility) => !prevVisibility);
     };
@@ -130,18 +174,31 @@ const Users = () => {
             title: 'Actions',
             dataIndex: 'actions',
             key: 'actions',
-            render: () => (
+            render: (_, record) => (
                 <td className="action-table-data">
                     <div className="edit-delete-action">
                         
                         <Link className="me-2 p-2" to="#">
                             <i data-feather="eye" className="feather feather-eye action-eye"></i>
                         </Link>
-                        <Link className="me-2 p-2" to="#" data-bs-toggle="modal" data-bs-target="#edit-units">
+                        <Link
+                            className="me-2 p-2"
+                            to="#"
+                            data-bs-toggle="modal"
+                            data-bs-target="#edit-units"
+                            onClick={() => setSelectedUser(record)}
+                        >
                             <i data-feather="edit" className="feather-edit"></i>
                         </Link>
                         <Link className="confirm-text p-2" to="#"  >
-                            <i data-feather="trash-2" className="feather-trash-2" onClick={showConfirmationAlert}></i>
+                            <i
+                                data-feather="trash-2"
+                                className="feather-trash-2"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    showConfirmationAlert(record);
+                                }}
+                            ></i>
                         </Link>
                     </div>
                 </td>
@@ -150,7 +207,7 @@ const Users = () => {
     ]
     const MySwal = withReactContent(Swal);
 
-    const showConfirmationAlert = () => {
+    const showConfirmationAlert = (record) => {
         MySwal.fire({
             title: 'Are you sure?',
             text: 'You won\'t be able to revert this!',
@@ -159,18 +216,14 @@ const Users = () => {
             confirmButtonText: 'Yes, delete it!',
             cancelButtonColor: '#ff0000',
             cancelButtonText: 'Cancel',
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-
-                MySwal.fire({
-                    title: 'Deleted!',
-                    text: 'Your file has been deleted.',
-                    className: "btn btn-success",
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-success',
-                    },
-                });
+                try {
+                    await dispatch(deleteUser(record.id));
+                    showSuccessToast('Deleted', 'User removed successfully.');
+                } catch (error) {
+                    showErrorToast('Delete Failed', error.message);
+                }
             } else {
                 MySwal.close();
             }
@@ -214,7 +267,14 @@ const Users = () => {
                             <li>
                                 <OverlayTrigger placement="top" overlay={renderRefreshTooltip}>
 
-                                    <Link data-bs-toggle="tooltip" data-bs-placement="top">
+                                    <Link
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            dispatch(fetchUsers());
+                                        }}
+                                    >
                                         <RotateCcw />
                                     </Link>
                                 </OverlayTrigger>
@@ -337,7 +397,7 @@ const Users = () => {
                             </div>
                             {/* /Filter */}
                             <div className="table-responsive">
-                                <Table columns={columns} dataSource={dataSource} />
+                                <Table columns={columns} dataSource={dataSource} loading={businessLoading} />
 
                             </div>
                         </div>
@@ -345,8 +405,12 @@ const Users = () => {
                     {/* /product list */}
                 </div>
             </div>
-        <AddUsers/>
-        <EditUser/>
+        <AddUsers onSubmit={handleCreateUser} loading={businessLoading} />
+        <EditUser
+            selectedUser={selectedUser}
+            onSubmit={handleUpdateUser}
+            loading={businessLoading}
+        />
         </div>
     )
 }

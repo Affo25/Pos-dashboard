@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ImageWithBasePath from '../../../core/img/imagewithbasebath'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
@@ -6,11 +6,56 @@ import { ChevronUp, RotateCcw, Upload, X } from 'feather-icons-react/build/IconC
 import { setToogleHeader } from '../../../core/redux/action'
 import { useDispatch, useSelector } from 'react-redux'
 import SettingsSideBar from '../settingssidebar'
+import { fetchSettings, updateSettings } from '../../../core/redux/businessAction'
+import { showErrorToast, showSuccessToast } from '../../../core/utils/toast'
 
 const CompanySettings = () => {
 
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
+    const appSettings = useSelector((state) => state.app_settings);
+    const businessLoading = useSelector((state) => state.business_loading);
+    const design = appSettings?.invoiceDesign || {};
+
+    const [companyName, setCompanyName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
+    const [tagline, setTagline] = useState('');
+    const [gstin, setGstin] = useState('');
+    const [regNumber, setRegNumber] = useState('');
+
+    useEffect(() => {
+        dispatch(fetchSettings());
+    }, [dispatch]);
+
+    useEffect(() => {
+        setCompanyName(design.companyName || '');
+        setEmail(design.email || '');
+        setPhone(design.phone || '');
+        setAddress(design.address || '');
+        setTagline(design.tagline || '');
+        setGstin(design.gstin || '');
+        setRegNumber(design.regNumber || '');
+    }, [appSettings]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        try {
+            await dispatch(updateSettings({
+                companyName,
+                email,
+                phone,
+                address,
+                tagline,
+                gstin,
+                regNumber,
+            }));
+            showSuccessToast('Settings Saved', 'Company settings updated successfully.');
+        } catch (error) {
+            showErrorToast('Save Failed', error.message);
+        }
+    };
 
     const renderRefreshTooltip = (props) => (
         <Tooltip id="refresh-tooltip" {...props}>
@@ -64,7 +109,7 @@ const CompanySettings = () => {
                             <div className="settings-wrapper d-flex">
                                 <SettingsSideBar/>
                                 <div className="settings-page-wrap">
-                                    <form>
+                                    <form onSubmit={handleSave}>
                                         <div className="setting-title">
                                             <h4>Company Settings</h4>
                                         </div>
@@ -81,7 +126,7 @@ const CompanySettings = () => {
                                                 <div className="col-xl-4 col-lg-6 col-md-4">
                                                     <div className="mb-3">
                                                         <label className="form-label">Company Name</label>
-                                                        <input type="text" className="form-control" />
+                                                        <input type="text" className="form-control" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="col-xl-4 col-lg-6 col-md-4">
@@ -89,13 +134,13 @@ const CompanySettings = () => {
                                                         <label className="form-label">
                                                             Company Email Address
                                                         </label>
-                                                        <input type="email" className="form-control" />
+                                                        <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="col-md-4">
                                                     <div className="mb-3">
                                                         <label className="form-label">Phone Number</label>
-                                                        <input type="text" className="form-control" />
+                                                        <input type="text" className="form-control" value={phone} onChange={(e) => setPhone(e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="col-md-4">
@@ -271,7 +316,7 @@ const CompanySettings = () => {
                                                 <div className="col-md-12">
                                                     <div className="mb-3">
                                                         <label className="form-label">Address</label>
-                                                        <input type="text" className="form-control" />
+                                                        <input type="text" className="form-control" value={address} onChange={(e) => setAddress(e.target.value)} />
                                                     </div>
                                                 </div>
                                                 <div className="col-xl-3 col-lg-4 col-md-3">
@@ -308,9 +353,9 @@ const CompanySettings = () => {
                                             >
                                                 Cancel
                                             </button>
-                                            <Link to="#" className="btn btn-submit">
-                                                Save Changes
-                                            </Link>
+                                            <button type="submit" className="btn btn-submit" disabled={businessLoading}>
+                                                {businessLoading ? 'Saving...' : 'Save Changes'}
+                                            </button>
                                         </div>
                                     </form>
                                 </div>

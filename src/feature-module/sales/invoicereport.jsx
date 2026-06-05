@@ -1,9 +1,21 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ImageWithBasePath from '../../core/img/imagewithbasebath';
 import { ChevronUp, RotateCcw, Sliders, StopCircle, User } from 'feather-icons-react/build/IconComponents';
 import { setToogleHeader } from '../../core/redux/action';
+import { fetchSaleInvoice, fetchSales } from '../../core/redux/businessAction';
+import { showErrorToast } from '../../core/utils/toast';
+import {
+    mapSaleRowsToRegisterRecords,
+    mapSaleToInvoicePayload,
+} from '../../core/utils/invoiceMappers';
+import {
+    handleListPdfPreview,
+    handleListPrint,
+    handleSingleInvoicePdf,
+    handleSingleInvoicePrint,
+} from '../../core/utils/printHelpers';
 import { useDispatch, useSelector } from 'react-redux';
 import { Filter } from 'react-feather';
 import Select from 'react-select';
@@ -14,10 +26,37 @@ import Calendar from 'feather-icons-react/build/IconComponents/Calendar';
 
 const InvoiceReport = () => {
     const dataSource = useSelector((state) => state.invoicereport_data);
+    const businessLoading = useSelector((state) => state.business_loading);
 
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
 
+    useEffect(() => {
+        dispatch(fetchSales());
+    }, [dispatch]);
+
+    const handlePdfPreview = () => {
+        handleListPdfPreview({
+            records: mapSaleRowsToRegisterRecords(dataSource),
+            subtitle: 'Invoice Report',
+        });
+    };
+
+    const handlePrint = () => {
+        handleListPrint({
+            records: mapSaleRowsToRegisterRecords(dataSource),
+            subtitle: 'Invoice Report',
+        });
+    };
+
+    const handleRowPdf = async (record) => {
+        try {
+            const invoice = await fetchSaleInvoice(record.id);
+            await handleSingleInvoicePdf(mapSaleToInvoicePayload(invoice));
+        } catch (error) {
+            showErrorToast('PDF Failed', error.message);
+        }
+    };
 
     const [isFilterVisible, setIsFilterVisible] = useState(false);
 
@@ -118,7 +157,15 @@ const InvoiceReport = () => {
             ),
             sorter: (a, b) => a.status.length - b.status.length,
         },
-
+        {
+            title: "PDF",
+            dataIndex: "pdf",
+            render: (_, record) => (
+                <Link to="#" onClick={(e) => { e.preventDefault(); handleRowPdf(record); }}>
+                    <ImageWithBasePath src="assets/img/icons/pdf.svg" alt="pdf" />
+                </Link>
+            ),
+        },
     ]
     const initialSettings = {
         endDate: new Date("2020-08-11T12:30:00.000Z"),
@@ -165,7 +212,7 @@ const InvoiceReport = () => {
                         <ul className="table-top-head">
                             <li>
                                 <OverlayTrigger placement="top" overlay={renderTooltip}>
-                                    <Link>
+                                    <Link to="#" onClick={(e) => { e.preventDefault(); handlePdfPreview(); }}>
                                         <ImageWithBasePath src="assets/img/icons/pdf.svg" alt="img" />
                                     </Link>
                                 </OverlayTrigger>
@@ -179,16 +226,14 @@ const InvoiceReport = () => {
                             </li>
                             <li>
                                 <OverlayTrigger placement="top" overlay={renderPrinterTooltip}>
-
-                                    <Link data-bs-toggle="tooltip" data-bs-placement="top">
+                                    <Link to="#" onClick={(e) => { e.preventDefault(); handlePrint(); }}>
                                         <i data-feather="printer" className="feather-printer" />
                                     </Link>
                                 </OverlayTrigger>
                             </li>
                             <li>
                                 <OverlayTrigger placement="top" overlay={renderRefreshTooltip}>
-
-                                    <Link data-bs-toggle="tooltip" data-bs-placement="top">
+                                    <Link to="#" onClick={(e) => { e.preventDefault(); dispatch(fetchSales()); }}>
                                         <RotateCcw />
                                     </Link>
                                 </OverlayTrigger>
@@ -310,7 +355,7 @@ const InvoiceReport = () => {
                             </div>
                             {/* /Filter */}
                             <div className="table-responsive">
-                                <Table columns={columns} dataSource={dataSource} />
+                                <Table columns={columns} dataSource={dataSource} loading={businessLoading} />
                             </div>
                         </div>
                     </div>

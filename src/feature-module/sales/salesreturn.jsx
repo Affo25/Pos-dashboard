@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ImageWithBasePath from '../../core/img/imagewithbasebath'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
@@ -8,15 +8,69 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Filter, Zap } from 'react-feather';
 import Select from 'react-select';
 import Table from '../../core/pagination/datatable'
-import withReactContent from 'sweetalert2-react-content';
-import Swal from 'sweetalert2';
 import AddSalesReturns from '../../core/modals/sales/addsalesreturns';
-import EditSalesRetuens from '../../core/modals/sales/editsalesretuens';
+import {
+  closeBootstrapModal,
+  createSaleReturn,
+  fetchSaleReturns,
+  fetchSales,
+} from '../../core/redux/businessAction';
+import { showErrorToast, showSuccessToast } from '../../core/utils/toast';
+import {
+  mapSaleReturnRowsToRegisterRecords,
+  mapSaleReturnToInvoicePayload,
+} from '../../core/utils/invoiceMappers';
+import {
+  handleListPdfPreview,
+  handleListPrint,
+  handleSingleInvoicePdf,
+  handleSingleInvoicePrint,
+} from '../../core/utils/printHelpers';
+
 const SalesReturn = () => {
 
   const dispatch = useDispatch();
   const data = useSelector((state) => state.toggle_header);
   const dataSource = useSelector((state) => state.salesreturns_data);
+  const salesList = useSelector((state) => state.sales_list_data);
+  const businessLoading = useSelector((state) => state.business_loading);
+
+  useEffect(() => {
+    dispatch(fetchSaleReturns());
+    dispatch(fetchSales());
+  }, [dispatch]);
+
+  const handleCreateReturn = async (payload) => {
+    try {
+      await dispatch(createSaleReturn(payload));
+      closeBootstrapModal('add-sales-new');
+      showSuccessToast('Return Created', 'Sales return saved successfully.');
+    } catch (error) {
+      showErrorToast('Create Failed', error.message);
+    }
+  };
+
+  const handlePdfPreview = () => {
+    handleListPdfPreview({
+      records: mapSaleReturnRowsToRegisterRecords(dataSource),
+      subtitle: 'Sales Return Register',
+    });
+  };
+
+  const handlePrint = () => {
+    handleListPrint({
+      records: mapSaleReturnRowsToRegisterRecords(dataSource),
+      subtitle: 'Sales Return Register',
+    });
+  };
+
+  const handleRowPdf = (record) => {
+    handleSingleInvoicePdf(mapSaleReturnToInvoicePayload(record._raw));
+  };
+
+  const handleRowPrint = (record) => {
+    handleSingleInvoicePrint(mapSaleReturnToInvoicePayload(record._raw));
+  };
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const toggleFilterVisibility = () => {
@@ -149,49 +203,20 @@ const SalesReturn = () => {
       title: 'Actions',
       dataIndex: 'actions',
       key: 'actions',
-      render: () => (
-        <td className="action-table-data">
+      render: (_, record) => (
+        <div className="action-table-data">
           <div className="edit-delete-action">
-            <Link className="me-2 p-2" to="#" data-bs-toggle="modal" data-bs-target="#edit-sales-new">
-              <i data-feather="edit" className="feather-edit"></i>
+            <Link className="me-2 p-2" to="#" onClick={(e) => { e.preventDefault(); handleRowPdf(record); }}>
+              <i data-feather="file-text" className="feather-file-text"></i>
             </Link>
-            <Link className="confirm-text p-2" to="#"  >
-              <i data-feather="trash-2" className="feather-trash-2" onClick={showConfirmationAlert}></i>
+            <Link className="me-2 p-2" to="#" onClick={(e) => { e.preventDefault(); handleRowPrint(record); }}>
+              <i data-feather="printer" className="feather-printer"></i>
             </Link>
           </div>
-        </td>
+        </div>
       )
     },
   ]
-  const MySwal = withReactContent(Swal);
-
-  const showConfirmationAlert = () => {
-    MySwal.fire({
-      title: 'Are you sure?',
-      text: 'You won\'t be able to revert this!',
-      showCancelButton: true,
-      confirmButtonColor: '#00ff00',
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonColor: '#ff0000',
-      cancelButtonText: 'Cancel',
-    }).then((result) => {
-      if (result.isConfirmed) {
-
-        MySwal.fire({
-          title: 'Deleted!',
-          text: 'Your file has been deleted.',
-          className: "btn btn-success",
-          confirmButtonText: 'OK',
-          customClass: {
-            confirmButton: 'btn btn-success',
-          },
-        });
-      } else {
-        MySwal.close();
-      }
-
-    });
-  };
   return (
     <div>
       <div className="page-wrapper">
@@ -206,7 +231,7 @@ const SalesReturn = () => {
             <ul className="table-top-head">
               <li>
                 <OverlayTrigger placement="top" overlay={renderTooltip}>
-                  <Link>
+                  <Link to="#" onClick={(e) => { e.preventDefault(); handlePdfPreview(); }}>
                     <ImageWithBasePath src="assets/img/icons/pdf.svg" alt="img" />
                   </Link>
                 </OverlayTrigger>
@@ -353,15 +378,14 @@ const SalesReturn = () => {
               </div>
               {/* /Filter */}
               <div className="table-responsive">
-                <Table columns={columns} dataSource={dataSource} />
+                <Table columns={columns} dataSource={dataSource} loading={businessLoading} />
               </div>
             </div>
           </div>
           {/* /product list */}
         </div>
       </div>
-      <AddSalesReturns />
-      <EditSalesRetuens />
+      <AddSalesReturns sales={salesList} onSubmit={handleCreateReturn} />
     </div>
   )
 }

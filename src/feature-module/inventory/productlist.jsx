@@ -11,24 +11,105 @@ import {
   StopCircle,
   Trash2,
 } from "feather-icons-react/build/IconComponents";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import Select from "react-select";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
-import Brand from "../../core/modals/inventory/brand";
+import ProductFormModal from "../../core/modals/inventory/productModal";
+import ImportProductModal from "../../core/modals/inventory/importproduct";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
 import { all_routes } from "../../Router/all_routes";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import Table from "../../core/pagination/datatable";
 import { setToogleHeader } from "../../core/redux/action";
+import {
+  closeBootstrapModal,
+  createProduct,
+  deleteProduct,
+  fetchCategories,
+  fetchProducts,
+  importProductsFromExcel,
+  updateProduct,
+} from "../../core/redux/inventoryAction";
+import { showErrorToast, showSuccessToast } from "../../core/utils/toast";
 import { Download } from "react-feather";
 
 const ProductList = () => {
   const dataSource = useSelector((state) => state.product_list);
+  const categories = useSelector((state) => state.categotylist_data);
+  const inventoryLoading = useSelector((state) => state.inventory_loading);
   const dispatch = useDispatch();
   const data = useSelector((state) => state.toggle_header);
+  const [modalMode, setModalMode] = useState("add");
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchProducts());
+    dispatch(fetchCategories());
+  }, [dispatch]);
+
+  const handleOpenAddModal = () => {
+    setModalMode("add");
+    setSelectedProduct(null);
+  };
+
+  const handleOpenEditModal = (record) => {
+    setModalMode("edit");
+    setSelectedProduct(record);
+  };
+
+  const handleCreateProduct = async (payload) => {
+    setSaving(true);
+    try {
+      await dispatch(createProduct(payload));
+      showSuccessToast("Product Created", "Product saved successfully.");
+      closeBootstrapModal("product-form-modal");
+    } catch (error) {
+      showErrorToast("Create Failed", error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateProduct = async (payload) => {
+    if (!selectedProduct?.id) return;
+    setSaving(true);
+    try {
+      await dispatch(updateProduct(selectedProduct.id, payload));
+      showSuccessToast("Product Updated", "Product updated successfully.");
+      closeBootstrapModal("product-form-modal");
+    } catch (error) {
+      showErrorToast("Update Failed", error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImportProducts = async (file) => {
+    setImporting(true);
+    try {
+      const result = await dispatch(importProductsFromExcel(file));
+      const inserted = result?.inserted ?? 0;
+      const skipped = result?.skipped ?? 0;
+      showSuccessToast(
+        "Import Complete",
+        `${inserted} product(s) imported${skipped ? `, ${skipped} skipped` : ""}.`
+      );
+      closeBootstrapModal("import-product-modal");
+    } catch (error) {
+      showErrorToast("Import Failed", error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    dispatch(fetchProducts());
+  };
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const toggleFilterVisibility = () => {
@@ -129,20 +210,32 @@ const ProductList = () => {
     {
       title: "Action",
       dataIndex: "action",
-      render: () => (
+      render: (_, record) => (
         <td className="action-table-data">
           <div className="edit-delete-action">
             <div className="input-block add-lists"></div>
             <Link className="me-2 p-2" to={route.productdetails}>
               <Eye className="feather-view" />
             </Link>
-            <Link className="me-2 p-2" to={route.editproduct}>
+            <Link
+              className="me-2 p-2"
+              to="#"
+              data-bs-toggle="modal"
+              data-bs-target="#product-form-modal"
+              onClick={(e) => {
+                e.preventDefault();
+                handleOpenEditModal(record);
+              }}
+            >
               <Edit className="feather-edit" />
             </Link>
             <Link
               className="confirm-text p-2"
               to="#"
-              onClick={showConfirmationAlert}
+              onClick={(e) => {
+                e.preventDefault();
+                showConfirmationAlert(record);
+              }}
             >
               <Trash2 className="feather-trash-2" />
             </Link>
@@ -154,7 +247,7 @@ const ProductList = () => {
   ];
   const MySwal = withReactContent(Swal);
 
-  const showConfirmationAlert = () => {
+  const showConfirmationAlert = (record) => {
     MySwal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -163,17 +256,14 @@ const ProductList = () => {
       confirmButtonText: "Yes, delete it!",
       cancelButtonColor: "#ff0000",
       cancelButtonText: "Cancel",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        MySwal.fire({
-          title: "Deleted!",
-          text: "Your file has been deleted.",
-          className: "btn btn-success",
-          confirmButtonText: "OK",
-          customClass: {
-            confirmButton: "btn btn-success",
-          },
-        });
+        try {
+          await dispatch(deleteProduct(record.id));
+          showSuccessToast("Deleted", "Product removed successfully.");
+        } catch (error) {
+          showErrorToast("Delete Failed", error.message);
+        }
       } else {
         MySwal.close();
       }
@@ -225,7 +315,11 @@ const ProductList = () => {
             </li>
             <li>
               <OverlayTrigger placement="top" overlay={renderExcelTooltip}>
-                <Link data-bs-toggle="tooltip" data-bs-placement="top">
+                <Link
+                  to="#"
+                  data-bs-toggle="modal"
+                  data-bs-target="#import-product-modal"
+                >
                   <ImageWithBasePath
                     src="assets/img/icons/excel.svg"
                     alt="img"
@@ -242,7 +336,14 @@ const ProductList = () => {
             </li>
             <li>
               <OverlayTrigger placement="top" overlay={renderRefreshTooltip}>
-                <Link data-bs-toggle="tooltip" data-bs-placement="top">
+                <Link
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleRefresh();
+                  }}
+                >
                   <RotateCcw />
                 </Link>
               </OverlayTrigger>
@@ -265,7 +366,16 @@ const ProductList = () => {
             </li>
           </ul>
           <div className="page-btn">
-            <Link to={route.addproduct} className="btn btn-added">
+            <Link
+              to="#"
+              className="btn btn-added"
+              data-bs-toggle="modal"
+              data-bs-target="#product-form-modal"
+              onClick={(e) => {
+                e.preventDefault();
+                handleOpenAddModal();
+              }}
+            >
               <PlusCircle className="me-2 iconsize" />
               Add New Product
             </Link>
@@ -275,7 +385,7 @@ const ProductList = () => {
               to="#"
               className="btn btn-added color"
               data-bs-toggle="modal"
-              data-bs-target="#view-notes"
+              data-bs-target="#import-product-modal"
             >
               <Download className="me-2" />
               Import Product
@@ -406,12 +516,28 @@ const ProductList = () => {
             </div>
             {/* /Filter */}
             <div className="table-responsive">
-              <Table columns={columns} dataSource={dataSource} />
+              <Table
+                columns={columns}
+                dataSource={dataSource}
+                loading={inventoryLoading}
+              />
             </div>
           </div>
         </div>
         {/* /product list */}
-        <Brand />
+        <ProductFormModal
+          mode={modalMode}
+          product={selectedProduct}
+          categories={categories}
+          loading={saving}
+          onSubmit={
+            modalMode === "edit" ? handleUpdateProduct : handleCreateProduct
+          }
+        />
+        <ImportProductModal
+          onSubmit={handleImportProducts}
+          loading={importing}
+        />
       </div>
     </div>
   );

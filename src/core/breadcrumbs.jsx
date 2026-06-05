@@ -71,14 +71,14 @@ const Breadcrumbs = (props) => {
           </li>
           <li>
             <OverlayTrigger placement="top" overlay={renderPrinterTooltip}>
-              <Link data-bs-toggle="tooltip" data-bs-placement="top">
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onPrint?.(); }}>
                 <i data-feather="printer" className="feather-printer" />
               </Link>
             </OverlayTrigger>
           </li>
           <li>
             <OverlayTrigger placement="top" overlay={renderRefreshTooltip}>
-              <Link data-bs-toggle="tooltip" data-bs-placement="top">
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onRefresh?.(); }}>
                 <RotateCcw />
               </Link>
             </OverlayTrigger>
@@ -132,7 +132,7 @@ const Breadcrumbs = (props) => {
         <ul className="table-top-head">
           <li>
             <OverlayTrigger placement="top" overlay={renderTooltip}>
-              <Link>
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onPdf?.(); }}>
                 <ImageWithBasePath src="assets/img/icons/pdf.svg" alt="img" />
               </Link>
             </OverlayTrigger>
@@ -197,7 +197,7 @@ const Breadcrumbs = (props) => {
         <ul className="table-top-head">
           <li>
             <OverlayTrigger placement="top" overlay={renderTooltip}>
-              <Link>
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onPdf?.(); }}>
                 <ImageWithBasePath src="assets/img/icons/pdf.svg" alt="img" />
               </Link>
             </OverlayTrigger>
@@ -211,14 +211,14 @@ const Breadcrumbs = (props) => {
           </li>
           <li>
             <OverlayTrigger placement="top" overlay={renderPrinterTooltip}>
-              <Link data-bs-toggle="tooltip" data-bs-placement="top">
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onPrint?.(); }}>
                 <i data-feather="printer" className="feather-printer" />
               </Link>
             </OverlayTrigger>
           </li>
           <li>
             <OverlayTrigger placement="top" overlay={renderRefreshTooltip}>
-              <Link data-bs-toggle="tooltip" data-bs-placement="top">
+              <Link to="#" onClick={(e) => { e.preventDefault(); props.onRefresh?.(); }}>
                 <RotateCcw />
               </Link>
             </OverlayTrigger>

@@ -35,6 +35,8 @@ const rootReducer = (state = initialState, action) => {
       return { ...state, invoicereport_data: action.payload };
     case "Salesreturns_Data":
       return { ...state, salesreturns_data: action.payload };
+    case "Purchase_returns_data":
+      return { ...state, purchase_returns_data: action.payload };
     case "Quatation_Data":
       return { ...state, quotationlist_data: action.payload };
     case "customer_data":
@@ -59,6 +61,26 @@ const rootReducer = (state = initialState, action) => {
       return { ...state, lowstock_data: action.payload };
     case "Categotylist_data":
       return { ...state, categotylist_data: action.payload };
+    case "Subcategory_data":
+      return { ...state, subcategory_data: action.payload };
+    case "Managestock_data":
+      return { ...state, managestockdata: action.payload };
+    case "Stocktransfer_data":
+      return { ...state, stocktransferdata: action.payload };
+    case "Stock_report_summary":
+      return { ...state, stock_report_summary: action.payload };
+    case "INVENTORY_LOADING":
+      return { ...state, inventory_loading: action.payload };
+    case "Supplier_data":
+      return { ...state, supplierdata: action.payload };
+    case "Sales_list_data":
+      return { ...state, sales_list_data: action.payload };
+    case "Purchase_orders_data":
+      return { ...state, purchase_orders_data: action.payload };
+    case "App_settings":
+      return { ...state, app_settings: action.payload };
+    case "BUSINESS_LOADING":
+      return { ...state, business_loading: action.payload };
     case "Layoutstyle_data":
       return { ...state, layoutstyledata: action.payload };
     case "AUTH_LOGIN_REQUEST":

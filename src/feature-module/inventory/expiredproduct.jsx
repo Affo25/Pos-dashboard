@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ImageWithBasePath from '../../core/img/imagewithbasebath';
 import { ChevronUp, Filter, RotateCcw, Sliders } from 'feather-icons-react/build/IconComponents';
 import { setToogleHeader } from '../../core/redux/action';
+import { fetchStockReport } from '../../core/redux/inventoryAction';
 import { useDispatch, useSelector } from 'react-redux';
 import Select from 'react-select';
 import { Box } from 'react-feather';
@@ -17,6 +18,11 @@ const ExpiredProduct = () => {
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
     const dataSource = useSelector((state) => state.expiredproduct_data);
+    const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+    useEffect(() => {
+        dispatch(fetchStockReport());
+    }, [dispatch]);
 
     const [isFilterVisible, setIsFilterVisible] = useState(false);
     const toggleFilterVisibility = () => {
@@ -283,7 +289,7 @@ const ExpiredProduct = () => {
                             </div>
                             {/* /Filter */}
                             <div className="table-responsive">
-                            <Table columns={columns} dataSource={dataSource} />
+                            <Table columns={columns} dataSource={dataSource} loading={inventoryLoading} />
 
                             </div>
                         </div>

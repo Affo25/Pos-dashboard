@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Breadcrumbs from "../../core/breadcrumbs";
 import { Filter, Sliders } from "react-feather";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
@@ -8,13 +8,20 @@ import { Archive, Calendar, User, Trash2, Edit } from "react-feather";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import StockTransferModal from "../../core/modals/stocks/stocktransferModal";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Table from "../../core/pagination/datatable";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import { fetchStockReport } from "../../core/redux/inventoryAction";
 
 const StockTransfer = () => {
+  const dispatch = useDispatch();
   const data = useSelector((state) => state.stocktransferdata);
+  const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+  useEffect(() => {
+    dispatch(fetchStockReport());
+  }, [dispatch]);
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -258,6 +265,7 @@ const StockTransfer = () => {
                 className="table datanew"
                 columns={columns}
                 dataSource={data}
+                loading={inventoryLoading}
 
                 // pagination={true}
               />

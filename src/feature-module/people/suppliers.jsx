@@ -1,40 +1,82 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Breadcrumbs from "../../core/breadcrumbs";
 import { Link } from "react-router-dom";
-import { Filter, Sliders, User, Globe, Edit, Eye, Trash2 } from "react-feather";
+import { Filter, Sliders, Edit, Eye, Trash2 } from "react-feather";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
 import Select from "react-select";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Table } from "antd";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import SupplierModal from "../../core/modals/peoples/supplierModal";
+import {
+  closeBootstrapModal,
+  createSupplier,
+  deleteSupplier,
+  fetchSuppliers,
+  updateSupplier,
+} from "../../core/redux/businessAction";
+import { showErrorToast, showSuccessToast } from "../../core/utils/toast";
 
 const Suppliers = () => {
+  const dispatch = useDispatch();
   const data = useSelector((state) => state.supplierdata);
+  const businessLoading = useSelector((state) => state.business_loading);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const MySwal = withReactContent(Swal);
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const toggleFilterVisibility = () => {
     setIsFilterVisible((prevVisibility) => !prevVisibility);
   };
 
+  useEffect(() => {
+    dispatch(fetchSuppliers());
+  }, [dispatch]);
+
+  const handleCreateSupplier = async (payload) => {
+    try {
+      await dispatch(createSupplier(payload));
+      closeBootstrapModal("add-units");
+      showSuccessToast("Supplier Created", "Supplier added successfully.");
+    } catch (error) {
+      showErrorToast("Create Failed", error.message);
+    }
+  };
+
+  const handleUpdateSupplier = async (id, payload) => {
+    try {
+      await dispatch(updateSupplier(id, payload));
+      closeBootstrapModal("edit-units");
+      showSuccessToast("Supplier Updated", "Supplier saved successfully.");
+    } catch (error) {
+      showErrorToast("Update Failed", error.message);
+    }
+  };
+
+  const showConfirmationAlert = (record) => {
+    MySwal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await dispatch(deleteSupplier(record.id));
+          showSuccessToast("Deleted", "Supplier removed successfully.");
+        } catch (error) {
+          showErrorToast("Delete Failed", error.message);
+        }
+      }
+    });
+  };
+
   const options = [
     { value: "sortByDate", label: "Sort by Date" },
     { value: "140923", label: "14 09 23" },
     { value: "110923", label: "11 09 23" },
-  ];
-  const optionsTwo = [
-    { label: "Choose Customer Name", value: "" },
-    { label: "Benjamin", value: "Benjamin" },
-    { label: "Ellen", value: "Ellen" },
-    { label: "Freda", value: "Freda" },
-    { label: "Kaitlin", value: "Kaitlin" },
-  ];
-
-  const countries = [
-    { label: "Choose Country", value: "" },
-    { label: "India", value: "India" },
-    { label: "USA", value: "USA" },
   ];
 
   const columns = [
@@ -46,7 +88,6 @@ const Suppliers = () => {
         </label>
       ),
     },
-
     {
       title: "Supplier Name",
       dataIndex: "supplierName",
@@ -65,96 +106,63 @@ const Suppliers = () => {
       dataIndex: "code",
       sorter: (a, b) => a.code.length - b.code.length,
     },
-
     {
       title: "Email",
       dataIndex: "email",
       sorter: (a, b) => a.email.length - b.email.length,
     },
-
     {
       title: "Phone",
       dataIndex: "phone",
       sorter: (a, b) => a.phone.length - b.phone.length,
     },
-
     {
       title: "Country",
       dataIndex: "country",
       sorter: (a, b) => a.country.length - b.country.length,
     },
-
     {
       title: "Action",
       dataIndex: "action",
-      render: () => (
+      render: (_, record) => (
         <td className="action-table-data">
           <div className="edit-delete-action">
-            <div className="input-block add-lists"></div>
-
             <Link className="me-2 p-2" to="#">
               <Eye className="feather-view" />
             </Link>
-
             <Link
               className="me-2 p-2"
               to="#"
               data-bs-toggle="modal"
               data-bs-target="#edit-units"
+              onClick={() => setSelectedSupplier(record)}
             >
               <Edit className="feather-edit" />
             </Link>
-
             <Link
               className="confirm-text p-2"
               to="#"
-              onClick={showConfirmationAlert}
+              onClick={(e) => {
+                e.preventDefault();
+                showConfirmationAlert(record);
+              }}
             >
               <Trash2 className="feather-trash-2" />
             </Link>
           </div>
         </td>
       ),
-      sorter: (a, b) => a.createdby.length - b.createdby.length,
     },
   ];
 
-  const MySwal = withReactContent(Swal);
-
-  const showConfirmationAlert = () => {
-    MySwal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      showCancelButton: true,
-      confirmButtonColor: "#00ff00",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonColor: "#ff0000",
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        MySwal.fire({
-          title: "Deleted!",
-          text: "Your file has been deleted.",
-          className: "btn btn-success",
-          confirmButtonText: "OK",
-          customClass: {
-            confirmButton: "btn btn-success",
-          },
-        });
-      } else {
-        MySwal.close();
-      }
-    });
-  };
   return (
     <div className="page-wrapper">
       <div className="content">
         <Breadcrumbs
-          maintitle="Supplier List "
-          subtitle="Manage Your Supplier"
+          maintitle="Suppliers"
+          subtitle="Manage your suppliers"
           addButton="Add New Supplier"
         />
-        {/* /product list */}
         <div className="card table-list-card">
           <div className="card-body">
             <div className="table-top">
@@ -165,97 +173,44 @@ const Suppliers = () => {
                     placeholder="Search"
                     className="form-control form-control-sm formsearch"
                   />
-                  <Link to className="btn btn-searchset">
+                  <Link to="#" className="btn btn-searchset">
                     <i data-feather="search" className="feather-search" />
                   </Link>
                 </div>
               </div>
               <div className="search-path">
                 <Link
-                  className={`btn btn-filter ${
-                    isFilterVisible ? "setclose" : ""
-                  }`}
-                  id="filter_search"
+                  className={`btn btn-filter ${isFilterVisible ? "setclose" : ""}`}
+                  onClick={toggleFilterVisibility}
                 >
-                  <Filter
-                    className="filter-icon"
-                    onClick={toggleFilterVisibility}
-                  />
-                  <span onClick={toggleFilterVisibility}>
-                    <ImageWithBasePath
-                      src="assets/img/icons/closes.svg"
-                      alt="img"
-                    />
+                  <Filter className="filter-icon" />
+                  <span>
+                    <Sliders className="info-img" />
                   </span>
                 </Link>
               </div>
-              <div className="form-sort stylewidth">
+              <div className="form-sort">
                 <Sliders className="info-img" />
-
-                <Select
-                  className="select "
-                  options={options}
-                  placeholder="Sort by Date"
-                />
+                <Select className="select" options={options} />
               </div>
             </div>
-            {/* /Filter */}
-            <div
-              className={`card${isFilterVisible ? " visible" : ""}`}
-              id="filter_inputs"
-              style={{ display: isFilterVisible ? "block" : "none" }}
-            >
-              <div className="card-body pb-0">
-                <div className="row">
-                  <div className="col-lg-3 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <User className="info-img" />
-                      <Select
-                        options={optionsTwo}
-                        placeholder="Choose Customer Name"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <Globe className="info-img" />
-                      <Select
-                        options={countries}
-                        placeholder="Choose Country"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-sm-6 col-12 ms-auto">
-                    <div className="input-blocks">
-                      <a className="btn btn-filters ms-auto">
-                        {" "}
-                        <i
-                          data-feather="search"
-                          className="feather-search"
-                        />{" "}
-                        Search{" "}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* /Filter */}
             <div className="table-responsive">
               <Table
-                className="table datanew"
                 columns={columns}
                 dataSource={data}
+                loading={businessLoading}
                 rowKey={(record) => record.id}
-                // pagination={true}
               />
             </div>
           </div>
         </div>
-        {/* /product list */}
       </div>
-
-      <SupplierModal />
+      <SupplierModal
+        selectedSupplier={selectedSupplier}
+        onCreate={handleCreateSupplier}
+        onUpdate={handleUpdateSupplier}
+        loading={businessLoading}
+      />
     </div>
   );
 };

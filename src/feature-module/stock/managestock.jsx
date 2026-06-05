@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Breadcrumbs from "../../core/breadcrumbs";
 import { Filter, Sliders } from "react-feather";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
@@ -12,10 +12,36 @@ import { Edit, Trash2 } from "react-feather";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Table from "../../core/pagination/datatable";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchStockReport } from "../../core/redux/inventoryAction";
+import { mapStockRowsToInvoicePayload } from "../../core/utils/invoiceMappers";
+import {
+  handleListPdfPreview,
+  handleListPrint,
+} from "../../core/utils/printHelpers";
 
 const Managestock = () => {
+  const dispatch = useDispatch();
   const data = useSelector((state) => state.managestockdata);
+  const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+  useEffect(() => {
+    dispatch(fetchStockReport());
+  }, [dispatch]);
+
+  const handlePdfPreview = () => {
+    handleListPdfPreview({
+      invoicePayload: mapStockRowsToInvoicePayload(data),
+      template: "report_a4",
+    });
+  };
+
+  const handlePrint = () => {
+    handleListPrint({
+      invoicePayload: mapStockRowsToInvoicePayload(data),
+      template: "report_a4",
+    });
+  };
 
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -171,6 +197,9 @@ const Managestock = () => {
           maintitle="Manage Stock"
           subtitle="Manage your stock"
           addButton="Add New"
+          onPdf={handlePdfPreview}
+          onPrint={handlePrint}
+          onRefresh={() => dispatch(fetchStockReport())}
         />
         {/* /product list */}
         <div className="card table-list-card">
@@ -290,6 +319,7 @@ const Managestock = () => {
                 className="table datanew"
                 columns={columns}
                 dataSource={data}
+                loading={inventoryLoading}
                 rowKey={(record) => record.id}
                 // pagination={true}
               />

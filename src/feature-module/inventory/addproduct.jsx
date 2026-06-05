@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Select from "react-select";
 import { all_routes } from "../../Router/all_routes";
 import { DatePicker } from "antd";
@@ -20,14 +20,29 @@ import {
 } from "feather-icons-react/build/IconComponents";
 import { useDispatch, useSelector } from "react-redux";
 import { setToogleHeader } from "../../core/redux/action";
+import { createProduct, fetchCategories } from "../../core/redux/inventoryAction";
+import { showErrorToast, showSuccessToast } from "../../core/utils/toast";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
 
 const AddProduct = () => {
   const route = all_routes;
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const data = useSelector((state) => state.toggle_header);
+  const categories = useSelector((state) => state.categotylist_data);
+  const inventoryLoading = useSelector((state) => state.inventory_loading);
+
+  const [name, setName] = useState("");
+  const [sku, setSku] = useState("");
+  const [categoryId, setCategoryId] = useState(null);
+  const [availableQuantity, setAvailableQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
+  const [minimumStockAlert, setMinimumStockAlert] = useState("");
+  const [supplierName, setSupplierName] = useState("General Supplier");
+  const [batchNumber, setBatchNumber] = useState("");
+  const [manufacturer, setManufacturer] = useState("");
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const handleDateChange = (date) => {
@@ -54,11 +69,54 @@ const AddProduct = () => {
     { value: "determined", label: "Determined" },
     { value: "sincere", label: "Sincere" },
   ];
-  const category = [
-    { value: "choose", label: "Choose" },
-    { value: "lenovo", label: "Lenovo" },
-    { value: "electronics", label: "Electronics" },
-  ];
+  useEffect(() => {
+    dispatch(fetchCategories());
+  }, [dispatch]);
+
+  const category = useMemo(
+    () => [
+      { value: "choose", label: "Choose" },
+      ...categories.map((item) => ({
+        value: item.id,
+        label: item.category,
+      })),
+    ],
+    [categories]
+  );
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+
+    if (!name.trim() || !categoryId || !availableQuantity || !unitPrice) {
+      showErrorToast(
+        "Validation Error",
+        "Product name, category, quantity and price are required."
+      );
+      return;
+    }
+
+    try {
+      await dispatch(
+        createProduct({
+          name: name.trim(),
+          sku: sku.trim() || undefined,
+          category: categoryId,
+          available_quantity: Number(availableQuantity),
+          unit_price: Number(unitPrice),
+          minimum_stock_alert: Number(minimumStockAlert || 0),
+          supplier_name: supplierName.trim() || "General Supplier",
+          batch_number: batchNumber.trim() || `BATCH-${Date.now()}`,
+          expiry_date: selectedDate1,
+          manufacturer: manufacturer.trim() || undefined,
+          status: "active",
+        })
+      );
+      showSuccessToast("Product Created", "Product saved successfully.");
+      navigate(route.productlist);
+    } catch (error) {
+      showErrorToast("Create Failed", error.message);
+    }
+  };
   const subcategory = [
     { value: "choose", label: "Choose" },
     { value: "lenovo", label: "Lenovo" },
@@ -152,7 +210,7 @@ const AddProduct = () => {
           </ul>
         </div>
         {/* /add */}
-        <form>
+        <form onSubmit={handleSaveProduct}>
           <div className="card">
             <div className="card-body add-product pb-0">
               <div
@@ -212,7 +270,12 @@ const AddProduct = () => {
                         <div className="col-lg-4 col-sm-6 col-12">
                           <div className="mb-3 add-product">
                             <label className="form-label">Product Name</label>
-                            <input type="text" className="form-control" />
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                            />
                           </div>
                         </div>
                         <div className="col-lg-4 col-sm-6 col-12">
@@ -228,6 +291,8 @@ const AddProduct = () => {
                               type="text"
                               className="form-control list"
                               placeholder="Enter SKU"
+                              value={sku}
+                              onChange={(e) => setSku(e.target.value)}
                             />
                             <Link
                               to={route.addproduct}
@@ -257,6 +322,17 @@ const AddProduct = () => {
                                 className="select"
                                 options={category}
                                 placeholder="Choose"
+                                value={
+                                  category.find((item) => item.value === categoryId) ||
+                                  null
+                                }
+                                onChange={(option) =>
+                                  setCategoryId(
+                                    option?.value === "choose"
+                                      ? null
+                                      : option?.value || null
+                                  )
+                                }
                               />
                             </div>
                           </div>
@@ -475,13 +551,23 @@ const AddProduct = () => {
                             <div className="col-lg-4 col-sm-6 col-12">
                               <div className="input-blocks add-product">
                                 <label>Quantity</label>
-                                <input type="text" className="form-control" />
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  value={availableQuantity}
+                                  onChange={(e) => setAvailableQuantity(e.target.value)}
+                                />
                               </div>
                             </div>
                             <div className="col-lg-4 col-sm-6 col-12">
                               <div className="input-blocks add-product">
                                 <label>Price</label>
-                                <input type="text" className="form-control" />
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  value={unitPrice}
+                                  onChange={(e) => setUnitPrice(e.target.value)}
+                                />
                               </div>
                             </div>
                             <div className="col-lg-4 col-sm-6 col-12">
@@ -515,7 +601,47 @@ const AddProduct = () => {
                             <div className="col-lg-4 col-sm-6 col-12">
                               <div className="input-blocks add-product">
                                 <label>Quantity Alert</label>
-                                <input type="text" className="form-control" />
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  value={minimumStockAlert}
+                                  onChange={(e) => setMinimumStockAlert(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="row">
+                            <div className="col-lg-4 col-sm-6 col-12">
+                              <div className="input-blocks add-product">
+                                <label>Supplier Name</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={supplierName}
+                                  onChange={(e) => setSupplierName(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-lg-4 col-sm-6 col-12">
+                              <div className="input-blocks add-product">
+                                <label>Batch Number</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={batchNumber}
+                                  onChange={(e) => setBatchNumber(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="col-lg-4 col-sm-6 col-12">
+                              <div className="input-blocks add-product">
+                                <label>Manufacturer</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={manufacturer}
+                                  onChange={(e) => setManufacturer(e.target.value)}
+                                />
                               </div>
                             </div>
                           </div>
@@ -995,9 +1121,13 @@ const AddProduct = () => {
               <button type="button" className="btn btn-cancel me-2">
                 Cancel
               </button>
-              <Link to={route.addproduct} className="btn btn-submit">
-                Save Product
-              </Link>
+              <button
+                type="submit"
+                className="btn btn-submit"
+                disabled={inventoryLoading}
+              >
+                {inventoryLoading ? "Saving..." : "Save Product"}
+              </button>
             </div>
           </div>
         </form>
