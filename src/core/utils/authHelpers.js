@@ -9,6 +9,9 @@ export const getDisplayName = (user) => user?.name || "User";
 export const getUserRoleLabel = (user) =>
   ROLE_LABELS[user?.user_type] || user?.user_type || "";
 
+export const isAdminRole = (userType) =>
+  ["admin", "superAdmin", "modertor"].includes(userType);
+
 export const splitFullName = (name = "") => {
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
   return {

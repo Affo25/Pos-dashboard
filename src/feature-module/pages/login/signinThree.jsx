@@ -30,7 +30,9 @@ const SigninThree = () => {
     const result = await dispatch(loginUser(email.trim(), password));
 
     if (result?.success) {
-      navigate(route.dashboard, {
+      const userType = result.data?.user_type;
+      const isAdmin = ["admin", "superAdmin", "modertor"].includes(userType);
+      navigate(isAdmin ? route.adminSubjects : route.dashboard, {
         state: {
           showLoginToast: true,
           userName: getDisplayName(result.data),
@@ -62,7 +64,7 @@ const SigninThree = () => {
                   <div className="login-userheading">
                     <h3>Sign In</h3>
                     <h4>
-                      Access the Dreamspos panel using your email and passcode.
+                      Access the Exam Checker panel using your email and password.
                     </h4>
                   </div>
                   <div className="form-login">
@@ -124,7 +126,7 @@ const SigninThree = () => {
                       {authLoading ? "Signing In..." : "Sign In"}
                     </button>
                   </div>
-                  {/* <div className="signinform">
+                  <div className="signinform">
                     <h4>
                       New on our platform?
                       <Link to={route.registerThree} className="hover-a">
@@ -132,7 +134,7 @@ const SigninThree = () => {
                         Create an account
                       </Link>
                     </h4>
-                  </div> */}
+                  </div>
                   {/* <div className="form-setlogin or-text">
                     <h4>OR</h4>
                   </div> */}

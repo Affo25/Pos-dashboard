@@ -6,8 +6,16 @@ import { SidebarData } from "../../core/json/siderbar_data";
 import HorizontalSidebar from "./horizontalSidebar";
 import CollapsedSidebar from "./collapsedSidebar";
 
+const isAdmin = (userType) =>
+  ["admin", "superAdmin", "modertor"].includes(userType);
+
 const filterMenuByRole = (menu, userType) => {
-  const canSee = (item) => !item?.superAdminOnly || userType === "superAdmin";
+  const canSee = (item) => {
+    if (item?.superAdminOnly && userType !== "superAdmin") return false;
+    if (item?.adminOnly && !isAdmin(userType)) return false;
+    if (item?.studentOnly && isAdmin(userType)) return false;
+    return true;
+  };
 
   return menu
     .filter((section) => canSee(section))

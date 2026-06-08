@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-    closeBootstrapModal,
     createUser,
     deleteUser,
-    fetchUsers,
+    getAllUsers,
+    mapUserToListRow,
     updateUser,
-} from '../../core/redux/businessAction';
+} from '../../core/api/userApi';
 import { showErrorToast, showSuccessToast } from '../../core/utils/toast';
+import { isAdminRole } from '../../core/utils/authHelpers';
+import { closeBootstrapModal } from '../../core/utils/modal';
 import ImageWithBasePath from '../../core/img/imagewithbasebath';
 import { ChevronUp, RotateCcw } from 'feather-icons-react/build/IconComponents';
 import { setToogleHeader } from '../../core/redux/action';
@@ -27,51 +29,66 @@ const Users = () => {
     const authUser = useSelector((state) => state.auth_user);
 
     const oldandlatestvalue = [
-        { value: 'date', label: 'Sort by Date' },
         { value: 'newest', label: 'Newest' },
         { value: 'oldest', label: 'Oldest' },
     ];
-    const users = [
-        { value: 'Choose Name', label: 'Choose Name' },
-        { value: 'Lilly', label: 'Lilly' },
-        { value: 'Benjamin', label: 'Benjamin' },
+    const statusOptions = [
+        { value: 'all', label: 'All Status' },
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
     ];
-    const status = [
-        { value: 'Choose Name', label: 'Choose Status' },
-        { value: 'Active', label: 'Active' },
-        { value: 'InActive', label: 'InActive' },
+    const roleOptions = [
+        { value: 'all', label: 'All Roles' },
+        { value: 'superAdmin', label: 'Super Admin' },
+        { value: 'admin', label: 'Admin' },
+        { value: 'user', label: 'User' },
+        { value: 'client', label: 'Client' },
     ];
-    const role = [
-        { value: 'Choose Role', label: 'Choose Role' },
-        { value: 'AcStore Keeper', label: 'Store Keeper' },
-        { value: 'Salesman', label: 'Salesman' },
-    ];
-
 
     const dispatch = useDispatch();
     const data = useSelector((state) => state.toggle_header);
-    const dataSource = useSelector((state) => state.userlist_data);
-    const businessLoading = useSelector((state) => state.business_loading);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [isFilterVisible, setIsFilterVisible] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const [sortOrder, setSortOrder] = useState('newest');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('all');
+
+    const loadUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await getAllUsers();
+            const rows = (response.data || []).map(mapUserToListRow);
+            setUsers(rows);
+        } catch (error) {
+            showErrorToast('Load Failed', error.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        if (authUser?.user_type !== 'superAdmin') {
+        if (!isAdminRole(authUser?.user_type)) {
             navigate('/');
             return;
         }
-        dispatch(fetchUsers());
-    }, [dispatch, authUser, navigate]);
+        loadUsers();
+    }, [authUser, navigate, loadUsers]);
 
-    if (authUser?.user_type !== 'superAdmin') {
+    if (!isAdminRole(authUser?.user_type)) {
         return null;
     }
 
+    const canManageSuperAdmin = authUser?.user_type === 'superAdmin';
+
     const handleCreateUser = async (payload) => {
         try {
-            await dispatch(createUser(payload));
+            await createUser(payload);
             closeBootstrapModal('add-units');
             showSuccessToast('User Created', 'User added successfully.');
+            await loadUsers();
         } catch (error) {
             showErrorToast('Create Failed', error.message);
         }
@@ -79,13 +96,48 @@ const Users = () => {
 
     const handleUpdateUser = async (id, payload) => {
         try {
-            await dispatch(updateUser(id, payload));
+            await updateUser(id, payload);
             closeBootstrapModal('edit-units');
             showSuccessToast('User Updated', 'User saved successfully.');
+            await loadUsers();
         } catch (error) {
             showErrorToast('Update Failed', error.message);
         }
     };
+
+    const dataSource = useMemo(() => {
+        let rows = [...users];
+
+        if (searchText.trim()) {
+            const query = searchText.trim().toLowerCase();
+            rows = rows.filter(
+                (row) =>
+                    row.username.toLowerCase().includes(query) ||
+                    row.email.toLowerCase().includes(query) ||
+                    row.phone.toLowerCase().includes(query) ||
+                    row.role.toLowerCase().includes(query)
+            );
+        }
+
+        if (statusFilter !== 'all') {
+            rows = rows.filter(
+                (row) => row._raw?.status?.toLowerCase() === statusFilter
+            );
+        }
+
+        if (roleFilter !== 'all') {
+            rows = rows.filter((row) => row._raw?.user_type === roleFilter);
+        }
+
+        rows.sort((a, b) => {
+            const aDate = new Date(a._raw?.created_at || 0).getTime();
+            const bDate = new Date(b._raw?.created_at || 0).getTime();
+            return sortOrder === 'oldest' ? aDate - bDate : bDate - aDate;
+        });
+
+        return rows;
+    }, [users, searchText, statusFilter, roleFilter, sortOrder]);
+
     const toggleFilterVisibility = () => {
         setIsFilterVisible((prevVisibility) => !prevVisibility);
     };
@@ -131,28 +183,29 @@ const Users = () => {
                     </div>
                 </span>
             ),
-            sorter: (a, b) => a.username.length - b.username.length,
+            sorter: (a, b) => a.username.localeCompare(b.username),
         },
 
         {
             title: "Phone",
             dataIndex: "phone",
-            sorter: (a, b) => a.phone.length - b.phone.length,
+            sorter: (a, b) => a.phone.localeCompare(b.phone),
         },
         {
             title: "Email",
             dataIndex: "email",
-            sorter: (a, b) => a.email.length - b.email.length,
+            sorter: (a, b) => a.email.localeCompare(b.email),
         },
         {
             title: "Role",
             dataIndex: "role",
-            sorter: (a, b) => a.role.length - b.role.length,
+            sorter: (a, b) => a.role.localeCompare(b.role),
         },
         {
             title: "Created On",
             dataIndex: "createdon",
-            sorter: (a, b) => a.createdon.length - b.createdon.length,
+            sorter: (a, b) =>
+                new Date(a._raw?.created_at || 0) - new Date(b._raw?.created_at || 0),
         },
         {
             title: "Status",
@@ -168,7 +221,7 @@ const Users = () => {
                   
                 </div>
               ),
-            sorter: (a, b) => a.status.length - b.status.length,
+            sorter: (a, b) => a.status.localeCompare(b.status),
         },
         {
             title: 'Actions',
@@ -219,8 +272,9 @@ const Users = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await dispatch(deleteUser(record.id));
+                    await deleteUser(record.id);
                     showSuccessToast('Deleted', 'User removed successfully.');
+                    await loadUsers();
                 } catch (error) {
                     showErrorToast('Delete Failed', error.message);
                 }
@@ -272,7 +326,7 @@ const Users = () => {
                                         data-bs-placement="top"
                                         onClick={(e) => {
                                             e.preventDefault();
-                                            dispatch(fetchUsers());
+                                            loadUsers();
                                         }}
                                     >
                                         <RotateCcw />
@@ -316,6 +370,8 @@ const Users = () => {
                                             type="text"
                                             placeholder="Search"
                                             className="form-control form-control-sm formsearch"
+                                            value={searchText}
+                                            onChange={(e) => setSearchText(e.target.value)}
                                         />
                                         <Link to className="btn btn-searchset">
                                             <i data-feather="search" className="feather-search" />
@@ -339,6 +395,8 @@ const Users = () => {
                                         className="select"
                                         options={oldandlatestvalue}
                                         placeholder="Newest"
+                                        value={oldandlatestvalue.find((o) => o.value === sortOrder)}
+                                        onChange={(option) => setSortOrder(option?.value || 'newest')}
                                     />
                                 </div>
                             </div>
@@ -356,8 +414,14 @@ const Users = () => {
 
                                                 <Select
                                                     className="select"
-                                                    options={users}
-                                                    placeholder="Newest"
+                                                    options={users.map((u) => ({
+                                                        value: u.id,
+                                                        label: u.username,
+                                                    }))}
+                                                    placeholder="Choose Name"
+                                                    onChange={(option) =>
+                                                        setSearchText(option?.label || '')
+                                                    }
                                                 />
                                             </div>
                                         </div>
@@ -367,8 +431,12 @@ const Users = () => {
 
                                                 <Select
                                                     className="select"
-                                                    options={status}
+                                                    options={statusOptions}
                                                     placeholder="Choose Status"
+                                                    value={statusOptions.find((o) => o.value === statusFilter)}
+                                                    onChange={(option) =>
+                                                        setStatusFilter(option?.value || 'all')
+                                                    }
                                                 />
                                             </div>
                                         </div>
@@ -378,14 +446,23 @@ const Users = () => {
 
                                                 <Select
                                                     className="select"
-                                                    options={role}
+                                                    options={roleOptions}
                                                     placeholder="Choose Role"
+                                                    value={roleOptions.find((o) => o.value === roleFilter)}
+                                                    onChange={(option) =>
+                                                        setRoleFilter(option?.value || 'all')
+                                                    }
                                                 />
                                             </div>
                                         </div>
                                         <div className="col-lg-3 col-sm-6 col-12">
                                             <div className="input-blocks">
-                                                <a className="btn btn-filters ms-auto">
+                                                <a
+                                                    className="btn btn-filters ms-auto"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                    }}
+                                                >
                                                     {" "}
                                                     <i data-feather="search" className="feather-search" />{" "}
                                                     Search{" "}
@@ -397,7 +474,7 @@ const Users = () => {
                             </div>
                             {/* /Filter */}
                             <div className="table-responsive">
-                                <Table columns={columns} dataSource={dataSource} loading={businessLoading} />
+                                <Table columns={columns} dataSource={dataSource} loading={loading} />
 
                             </div>
                         </div>
@@ -405,11 +482,16 @@ const Users = () => {
                     {/* /product list */}
                 </div>
             </div>
-        <AddUsers onSubmit={handleCreateUser} loading={businessLoading} />
+        <AddUsers
+            onSubmit={handleCreateUser}
+            loading={loading}
+            allowSuperAdmin={canManageSuperAdmin}
+        />
         <EditUser
             selectedUser={selectedUser}
             onSubmit={handleUpdateUser}
-            loading={businessLoading}
+            loading={loading}
+            allowSuperAdmin={canManageSuperAdmin}
         />
         </div>
     )

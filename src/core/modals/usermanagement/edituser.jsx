@@ -13,7 +13,10 @@ const STATUS_OPTIONS = [
   { value: "inactive", label: "Inactive" },
 ];
 
-const EditUser = ({ selectedUser, onSubmit, loading = false }) => {
+const EditUser = ({ selectedUser, onSubmit, loading = false, allowSuperAdmin = false }) => {
+  const roleOptions = allowSuperAdmin
+    ? ROLE_OPTIONS
+    : ROLE_OPTIONS.filter((option) => option.value !== "superAdmin");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -158,10 +161,10 @@ const EditUser = ({ selectedUser, onSubmit, loading = false }) => {
                           <label>Role</label>
                           <Select
                             className="select"
-                            options={ROLE_OPTIONS}
+                            options={roleOptions}
                             placeholder="Choose Role"
                             value={
-                              ROLE_OPTIONS.find(
+                              roleOptions.find(
                                 (item) => item.value === userType
                               ) || null
                             }

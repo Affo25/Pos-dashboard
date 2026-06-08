@@ -25,8 +25,13 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   if (!response.ok) {
     const message =
-      data?.message || data?.error || `Request failed (${response.status})`;
-    throw new Error(message);
+      data?.detail ||
+      data?.message ||
+      data?.error ||
+      `Request failed (${response.status})`;
+    throw new Error(
+      typeof message === "string" ? message : JSON.stringify(message)
+    );
   }
 
   return data;
